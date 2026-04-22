@@ -11,7 +11,7 @@ export default async function AdminPage() {
 
   const [{ count: newsCount }, { count: galleryCount }] = await Promise.all([
     supabase.from("news").select("*", { count: "exact", head: true }),
-    supabase.from("gallery").select("*", { count: "exact", head: true }),
+    supabase.from("gallery_albums").select("*", { count: "exact", head: true }),
   ]);
 
   return (
