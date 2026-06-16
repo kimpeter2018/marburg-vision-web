@@ -20,48 +20,40 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col">
-      {/* 1. 히어로 섹션 */}
-      <section className="relative h-[75vh] min-h-[520px] overflow-hidden flex">
-        {/* 왼쪽 오버레이 — 슬로건 + CTA */}
-        <div className="relative z-10 flex flex-col justify-center px-10 md:px-16 lg:px-20 w-full md:w-2/5 bg-gradient-to-r from-yellow-50 via-yellow-50/95 to-yellow-50/0 md:bg-none">
-          {/* 모바일용: 반투명 오버레이 배경 */}
-          <div className="absolute inset-0 bg-white/80 md:hidden" />
-          {/* md 이상: 왼쪽 그라데이션 */}
-          <div className="absolute inset-0 hidden md:block bg-gradient-to-r from-yellow-50 via-yellow-50/90 to-transparent" />
+      {/* 1. 히어로 섹션 — 풀스크린 이미지 + 왼쪽 하단 그라데이션 오버레이 */}
+      <section className="relative h-[75vh] min-h-[520px] overflow-hidden">
+        {/* 배경 이미지 */}
+        <Image
+          src="/marburg-hero.jpg"
+          alt="마부르크 비전교회"
+          fill
+          priority
+          className="object-cover object-center"
+          sizes="100vw"
+        />
 
-          <div className="relative z-10">
-            <p className="text-xs font-medium tracking-widest text-yellow-600 uppercase mb-4">
-              마부르크 비전교회
-            </p>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-700 leading-snug mb-6">
-              하나님 안에서 하나 되며
-              <br />
-              <span className="text-yellow-500">함께 지어져 가는 교회</span>
-            </h1>
-            <Link
-              href="/about"
-              className="inline-flex items-center gap-2 bg-yellow-300 hover:bg-yellow-400 text-gray-700 font-medium px-7 py-3 rounded-full transition-colors text-sm"
-            >
-              교회 소개 보기
-              <span aria-hidden="true">→</span>
-            </Link>
-          </div>
+        {/* 왼쪽 하단에서 40% 지점에서 사라지는 그라데이션 오버레이 */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" style={{ backgroundSize: "40% 100%", backgroundRepeat: "no-repeat" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(0,0,0,0.60) 0%, rgba(0,0,0,0.35) 20%, rgba(0,0,0,0.05) 38%, transparent 42%)" }} />
+
+        {/* 텍스트 콘텐츠 */}
+        <div className="relative z-10 h-full flex flex-col justify-center px-8 md:px-16 lg:px-24 max-w-xl">
+          <p className="text-xs font-medium tracking-widest text-yellow-300 uppercase mb-4">
+            마부르크 비전교회
+          </p>
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white leading-snug mb-6 drop-shadow-sm">
+            하나님 안에서 하나 되며
+            <br />
+            <span className="text-yellow-300">함께 지어져 가는 교회</span>
+          </h1>
+          <Link
+            href="/about"
+            className="inline-flex items-center gap-2 bg-yellow-300 hover:bg-yellow-400 text-gray-800 font-medium px-7 py-3 rounded-full transition-colors text-sm w-fit"
+          >
+            교회 소개 보기
+            <span aria-hidden="true">→</span>
+          </Link>
         </div>
-
-        {/* 오른쪽 히어로 이미지 — 3/4 너비 */}
-        <div className="absolute inset-0 md:left-[40%] md:right-0">
-          <Image
-            src="/marburg-hero.jpg"
-            alt="마부르크 비전교회"
-            fill
-            priority
-            className="object-cover object-center"
-            sizes="(max-width: 768px) 100vw, 70vw"
-          />
-        </div>
-
-        {/* 모바일: 이미지 전체 위에 오버레이 */}
-        <div className="absolute inset-0 md:hidden bg-gradient-to-b from-transparent via-transparent to-white/10" />
       </section>
 
       {/* 2. 예배 안내 섹션 */}
@@ -79,9 +71,7 @@ export default async function HomePage() {
               <h3 className="text-lg font-semibold text-gray-700 mb-1">
                 주일예배
               </h3>
-              <p className="text-gray-500 text-sm mb-3">
-                Wehrdaer Str. 60, 35041 Marburg
-              </p>
+              <p className="text-gray-500 text-sm mb-3">Wehrdaer Str. 60, 35041 Marburg</p>
               <p className="text-2xl font-bold text-yellow-500">매주 일요일</p>
               <p className="text-xl text-gray-600">오후 12:00</p>
             </div>
