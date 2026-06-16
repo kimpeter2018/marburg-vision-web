@@ -27,8 +27,8 @@ export default function Footer() {
               마부르크 비전교회
             </h3>
             <address className="not-italic text-sm text-gray-500 leading-relaxed">
-              <p>[주소를 입력하세요]</p>
-              <p className="mt-1">Tel: [전화번호를 입력하세요]</p>
+              <p>Wehrdaer Str. 60, 35041 Marburg</p>
+              <p className="mt-1">Tel: +49 173 8815073</p>
             </address>
           </div>
 
