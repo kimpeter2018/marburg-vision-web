@@ -25,16 +25,16 @@ export default function AboutPage() {
           <div className="flex flex-col md:flex-row items-center gap-10">
             <div className="flex-1">
               <p className="text-gray-500 leading-relaxed text-sm md:text-base">
-                마부르크 비전교회는 누구나 자유롭게, 형식에 얽매이지 않고
-                하나님께 예배드릴 수 있기를 바라는 소망 하나로 2017년에 문을
-                열었습니다. 작은 시작이었지만, 같은 마음을 품은 작은 손길들이
-                하나둘 모여 지금까지 매주 예배를 이어오고 있습니다.
+                마부르크 비전교회는 누구나 자유롭게, 하나님께 예배드릴 수 있기를
+                바라는 소망 하나로 2017년에 문을 열었습니다. 작은 시작이었지만,
+                같은 마음을 품은 작은 손길들이 하나둘 모여 지금까지 매주 예배를
+                이어오고 있습니다.
               </p>
             </div>
             <div className="w-full md:w-72 flex-shrink-0">
               <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100">
                 <Image
-                  src="/church.jpg"
+                  src="/church-sermon.jpg"
                   alt="마부르크 비전교회"
                   fill
                   className="object-cover"
@@ -58,8 +58,8 @@ export default function AboutPage() {
             <div className="w-full md:w-72 flex-shrink-0">
               <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100">
                 <Image
-                  src="/church.jpg"
-                  alt="마부르크 비전교회 예배"
+                  src="/marburg-castle.jpg"
+                  alt="마부르크 성"
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 288px"
@@ -81,7 +81,7 @@ export default function AboutPage() {
             <div className="w-full md:w-72 flex-shrink-0">
               <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100">
                 <Image
-                  src="/church.jpg"
+                  src="/church-meal.jpg"
                   alt="마부르크 비전교회 교제"
                   fill
                   className="object-cover"
