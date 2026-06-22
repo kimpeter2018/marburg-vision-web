@@ -99,10 +99,9 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? "",
+    google: "Y42Qi2jiSVx3bB1vLOEy8OteBlFS7utw-DtItvUpLfI",
     other: {
-      "naver-site-verification":
-        process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION ?? "",
+      "naver-site-verification": "55c62158d4c40d961b52e1a87f1829d75fe3d6b6",
     },
   },
 };
