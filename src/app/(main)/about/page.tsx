@@ -174,17 +174,18 @@ export default function AboutPage() {
             <h2 className="text-xl font-bold text-gray-700 mb-8 text-center">
               담임 목사 소개
             </h2>
-            <div className="flex flex-col md:flex-row items-center gap-8">
-              <div className="relative w-44 h-44 rounded-full overflow-hidden flex-shrink-0 bg-yellow-100">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-8 mx-auto w-fit">
+              <div className="relative w-56 h-72 rounded-2xl overflow-hidden flex-shrink-0 bg-yellow-100">
                 <Image
                   src="/pastor-profile.jpg"
                   alt="마부르크 비전교회 담임 이경주 목사 프로필 사진"
                   fill
                   className="object-cover"
-                  sizes="176px"
+                  sizes="224px"
                 />
               </div>
-              <div className="flex-1 text-center md:text-left">
+
+              <div className="text-center md:text-left">
                 <h3 className="text-lg font-semibold text-gray-700 mb-1">
                   이경주 목사
                 </h3>
