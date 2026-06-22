@@ -117,7 +117,7 @@ export default function AboutPage() {
               <div className="w-full md:w-72 flex-shrink-0">
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100">
                   <Image
-                    src="/marburg-castle.jpg"
+                    src="/marburg-schloss.jpg"
                     alt="독일 마부르크 성 전경"
                     fill
                     className="object-cover"
@@ -151,6 +151,23 @@ export default function AboutPage() {
           </div>
         </section>
 
+        {/* 교회 전체 사진 */}
+        <section className="py-16 px-4">
+          <div className="max-w-3xl mx-auto flex justify-center">
+            <div className="w-full md:w-2xl">
+              <div className="relative aspect-video rounded-3xl overflow-hidden bg-gray-100 shadow-md">
+                <Image
+                  src="/church-group.jpg"
+                  alt="마부르크 비전교회 단체 사진"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 672px"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* 목사님 소개 */}
         <section className="py-16 px-4 bg-yellow-50">
           <div className="max-w-3xl mx-auto">
@@ -175,9 +192,10 @@ export default function AboutPage() {
                   담임 목사
                 </p>
                 <ul className="text-gray-500 text-sm space-y-1.5">
-                  <li>협성대학교 졸업</li>
-                  <li>청주 OO교회 개척</li>
-                  <li>FLN 선교훈련 수료</li>
+                  <li>백석대학교 신학과 졸업</li>
+                  <li>협성신학 대학원 졸업</li>
+                  <li>청주 샘물교회 개척</li>
+                  <li>마부르크 비전교회 개척</li>
                 </ul>
               </div>
             </div>
@@ -193,7 +211,7 @@ export default function AboutPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
               <div className="rounded-2xl overflow-hidden aspect-video shadow-sm">
                 <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2520.0!2d8.7493!3d50.8211!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47bc2a4e4f0b0001%3A0x0!2sWehrdaer+Str.+60%2C+35041+Marburg!5e0!3m2!1sko!2sde!4v1700000000000!5m2!1sko!2sde"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2519.9679883740455!2d8.759901476084538!3d50.83175685983652!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47bc63003b5573b1%3A0xf2de3863ad48923b!2z66eI67aA66W07YGsIOu5hOyghCDqtZDtmow!5e0!3m2!1sko!2sde!4v1782128910004!5m2!1sko!2sde"
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}

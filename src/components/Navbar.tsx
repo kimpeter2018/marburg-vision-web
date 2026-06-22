@@ -18,7 +18,7 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* 로고 */}
         <Link href="/" className="flex items-center gap-3">
-          <div className="relative h-10 w-10 overflow-hidden rounded-full border border-yellow-200 bg-white">
+          <div className="relative h-10 w-10 overflow-hidden rounded-full">
             <Image
               src="/church-logo.jpeg"
               alt="마부르크 비전교회 로고"
