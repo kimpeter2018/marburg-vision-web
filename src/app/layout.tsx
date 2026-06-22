@@ -8,42 +8,101 @@ const notoSansKR = Noto_Sans_KR({
   variable: "--font-noto-sans-kr",
 });
 
+const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(baseUrl),
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      {
+        url: "/favicon-16x16.png",
+        sizes: "16x16",
+        type: "image/png",
+      },
+      {
+        url: "/favicon-32x32.png",
+        sizes: "32x32",
+        type: "image/png",
+      },
+    ],
+    apple: [
+      {
+        url: "/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
+  },
+
+  manifest: "/site.webmanifest",
   title: {
     default: "마부르크 비전교회",
     template: "%s | 마부르크 비전교회",
   },
-  description: "[교회 소개 문구를 여기에 입력하세요]",
+  description:
+    "독일 마부르크에 위치한 한인 교회입니다. 매주 일요일 오후 12시 주일예배, 매주 목요일 저녁 8시 온라인 목요모임을 드립니다. Wehrdaer Str. 60, 35041 Marburg",
   keywords: [
     "마부르크 비전교회",
+    "마부르크 한인교회",
+    "독일 한인교회",
     "독일 교회",
-    "한인 교회",
-    "Marburg",
+    "Marburg 한인교회",
     "비전교회",
-    "독일 한인 교회",
+    "독일 마부르크",
+    "마부르크 교회",
+    "Marburg Korean Church",
+    "독일 유학생 교회",
+    "마부르크 유학생 교회",
   ],
   authors: [{ name: "마부르크 비전교회" }],
   creator: "마부르크 비전교회",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-  ),
+  publisher: "마부르크 비전교회",
+  formatDetection: {
+    telephone: true,
+    email: false,
+    address: true,
+  },
   openGraph: {
     title: "마부르크 비전교회",
-    description: "[교회 소개 문구를 여기에 입력하세요]",
+    description:
+      "독일 마부르크에 위치한 한인 교회입니다. 매주 일요일 오후 12시 주일예배, 매주 목요일 저녁 8시 온라인 목요모임을 드립니다.",
+    url: baseUrl,
     locale: "ko_KR",
     type: "website",
     siteName: "마부르크 비전교회",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "마부르크 비전교회",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "마부르크 비전교회",
-    description: "[교회 소개 문구를 여기에 입력하세요]",
+    description:
+      "독일 마부르크에 위치한 한인 교회입니다. 매주 일요일 오후 12시 주일예배.",
+    images: ["/og-image.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
   verification: {
-    google: "[Google Search Console 인증 코드 — 나중에 입력]",
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? "",
     other: {
       "naver-site-verification":
-        "[네이버 서치어드바이저 인증 코드 — 나중에 입력]",
+        process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION ?? "",
     },
   },
 };

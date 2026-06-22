@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -16,11 +17,19 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-yellow-100">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* 로고 */}
-        <Link
-          href="/"
-          className="font-bold text-lg text-gray-700 tracking-tight hover:text-yellow-500 transition-colors"
-        >
-          마부르크 비전교회
+        <Link href="/" className="flex items-center gap-3">
+          <div className="relative h-10 w-10 overflow-hidden rounded-full border border-yellow-200 bg-white">
+            <Image
+              src="/church-logo.jpeg"
+              alt="마부르크 비전교회 로고"
+              fill
+              sizes="40px"
+              className="object-cover"
+            />
+          </div>
+          <span className="font-bold text-lg text-gray-700 tracking-tight hover:text-yellow-500 transition-colors">
+            마부르크 비전교회
+          </span>
         </Link>
 
         {/* 데스크탑 메뉴 */}
