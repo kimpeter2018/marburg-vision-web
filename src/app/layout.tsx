@@ -85,7 +85,7 @@ export const metadata: Metadata = {
     title: "마부르크 비전교회",
     description:
       "독일 마부르크에 위치한 한인 교회입니다. 매주 일요일 오후 12시 주일예배.",
-    images: ["/og-image.jpg"],
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,
