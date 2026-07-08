@@ -17,7 +17,7 @@ export default async function AdminGalleryPage() {
     supabase
       .from("gallery")
       .select("*")
-      .order("created_at", { ascending: false }),
+      .order("sort_order", { ascending: true }),
   ]);
 
   return (

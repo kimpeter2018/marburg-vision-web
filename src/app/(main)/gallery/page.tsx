@@ -37,7 +37,7 @@ export default async function GalleryPage() {
     supabase
       .from("gallery")
       .select("*")
-      .order("created_at", { ascending: false }),
+      .order("sort_order", { ascending: true }),
   ]);
 
   // JSON-LD: ImageGallery

@@ -17,6 +17,7 @@ type GalleryItem = {
   image_url: string | null;
   youtube_url: string | null;
   album_id: string | null;
+  sort_order: number;
 };
 
 function getYoutubeId(url: string) {

@@ -18,11 +18,137 @@ type GalleryItem = {
   image_url: string | null;
   youtube_url: string | null;
   album_id: string | null;
+  sort_order: number;
 };
 
 function getYoutubeId(url: string) {
   const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
   return match ? match[1] : null;
+}
+
+function moveItem<T>(arr: T[], from: number, to: number): T[] {
+  const copy = [...arr];
+  const [moved] = copy.splice(from, 1);
+  copy.splice(to, 0, moved);
+  return copy;
+}
+
+/** 드래그로 순서를 바꿀 수 있는 썸네일 그리드 (신규 업로드 미리보기용) */
+function ReorderablePreviewGrid({
+  previews,
+  onReorder,
+  onRemove,
+}: {
+  previews: string[];
+  onReorder: (from: number, to: number) => void;
+  onRemove?: (index: number) => void;
+}) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  return (
+    <div className="grid grid-cols-4 gap-2 mt-3">
+      {previews.map((src, i) => (
+        <div
+          key={i}
+          draggable
+          onDragStart={() => setDragIndex(i)}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (dragIndex === null || dragIndex === i) return;
+            onReorder(dragIndex, i);
+            setDragIndex(null);
+          }}
+          onDragEnd={() => setDragIndex(null)}
+          className={`relative aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-grab active:cursor-grabbing ${
+            dragIndex === i ? "opacity-40" : ""
+          }`}
+        >
+          <Image
+            src={src}
+            alt={`미리보기 ${i + 1}`}
+            fill
+            className="object-cover"
+          />
+          <span className="absolute top-1 left-1 bg-black/60 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+            {i + 1}
+          </span>
+          {onRemove && (
+            <button
+              type="button"
+              onClick={() => onRemove(i)}
+              className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded"
+            >
+              삭제
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** 드래그로 순서를 바꿀 수 있는 기존 항목 그리드 (수정 화면용) */
+function ReorderableItemGrid({
+  items,
+  onReorder,
+  onDelete,
+}: {
+  items: GalleryItem[];
+  onReorder: (from: number, to: number) => void;
+  onDelete: (item: GalleryItem) => void;
+}) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {items.map((item, i) => (
+        <div
+          key={item.id}
+          draggable
+          onDragStart={() => setDragIndex(i)}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (dragIndex === null || dragIndex === i) return;
+            onReorder(dragIndex, i);
+            setDragIndex(null);
+          }}
+          onDragEnd={() => setDragIndex(null)}
+          className={`relative group aspect-square cursor-grab active:cursor-grabbing ${
+            dragIndex === i ? "opacity-40" : ""
+          }`}
+        >
+          <div className="relative w-full h-full rounded-lg overflow-hidden bg-gray-100">
+            {item.type === "image" && item.image_url ? (
+              <Image
+                src={item.image_url}
+                alt="갤러리"
+                fill
+                className="object-cover"
+              />
+            ) : item.youtube_url ? (
+              <Image
+                src={`https://img.youtube.com/vi/${getYoutubeId(item.youtube_url)}/hqdefault.jpg`}
+                alt="유튜브"
+                fill
+                className="object-cover"
+              />
+            ) : null}
+          </div>
+          <span className="absolute top-1 left-1 bg-black/60 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+            {i + 1}
+          </span>
+          <button
+            onClick={() => onDelete(item)}
+            className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            삭제
+          </button>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function GalleryAdmin({
@@ -55,6 +181,10 @@ export default function GalleryAdmin({
   const [editPreviews, setEditPreviews] = useState<string[]>([]);
   const [editYoutubeUrl, setEditYoutubeUrl] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  // 수정 화면에서 순서를 바꿀 수 있는 기존 항목 목록 (드래그로 정렬, 저장 시 반영)
+  const [existingItemsOrder, setExistingItemsOrder] = useState<GalleryItem[]>(
+    [],
+  );
 
   const supabase = createClient();
 
@@ -62,6 +192,16 @@ export default function GalleryAdmin({
     const files = Array.from(e.target.files ?? []);
     setAlbumFiles(files);
     setAlbumPreviews(files.map((f) => URL.createObjectURL(f)));
+  };
+
+  const handleReorderNewFiles = (from: number, to: number) => {
+    setAlbumFiles((prev) => moveItem(prev, from, to));
+    setAlbumPreviews((prev) => moveItem(prev, from, to));
+  };
+
+  const handleRemoveNewFile = (index: number) => {
+    setAlbumFiles((prev) => prev.filter((_, i) => i !== index));
+    setAlbumPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleCreateAlbum = async () => {
@@ -80,8 +220,9 @@ export default function GalleryAdmin({
       if (albumError) throw albumError;
 
       const newItems: GalleryItem[] = [];
+      let order = 0;
 
-      // 2. 사진 업로드
+      // 2. 사진 업로드 — albumFiles 배열의 순서(=드래그로 정한 순서)대로 sort_order 부여
       for (const file of albumFiles) {
         const ext = file.name.split(".").pop();
         const fileName = `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -96,14 +237,20 @@ export default function GalleryAdmin({
 
         const { data: item, error: itemError } = await supabase
           .from("gallery")
-          .insert({ type: "image", image_url: publicUrl, album_id: album.id })
+          .insert({
+            type: "image",
+            image_url: publicUrl,
+            album_id: album.id,
+            sort_order: order,
+          })
           .select()
           .single();
         if (itemError) throw itemError;
         newItems.push(item);
+        order += 1;
       }
 
-      // 3. 유튜브 추가
+      // 3. 유튜브 추가 (맨 뒤 순서)
       if (youtubeUrl) {
         const { data: item, error: itemError } = await supabase
           .from("gallery")
@@ -111,6 +258,7 @@ export default function GalleryAdmin({
             type: "youtube",
             youtube_url: youtubeUrl,
             album_id: album.id,
+            sort_order: order,
           })
           .select()
           .single();
@@ -118,7 +266,7 @@ export default function GalleryAdmin({
         newItems.push(item);
       }
 
-      // 4. 앨범 커버 이미지 설정 (첫 번째 사진)
+      // 4. 앨범 커버 이미지 설정 (첫 번째 사진 = 정렬 순서상 1번)
       const coverUrl = newItems.find((i) => i.type === "image")?.image_url;
       if (coverUrl) {
         await supabase
@@ -171,6 +319,12 @@ export default function GalleryAdmin({
     setEditFiles([]);
     setEditPreviews([]);
     setEditYoutubeUrl("");
+    setExistingItemsOrder(
+      items
+        .filter((i) => i.album_id === album.id)
+        .slice()
+        .sort((a, b) => a.sort_order - b.sort_order),
+    );
     setView("edit-album");
   };
 
@@ -181,6 +335,7 @@ export default function GalleryAdmin({
     setEditFiles([]);
     setEditPreviews([]);
     setEditYoutubeUrl("");
+    setExistingItemsOrder([]);
     setView("list");
   };
 
@@ -188,6 +343,20 @@ export default function GalleryAdmin({
     const files = Array.from(e.target.files ?? []);
     setEditFiles(files);
     setEditPreviews(files.map((f) => URL.createObjectURL(f)));
+  };
+
+  const handleReorderEditNewFiles = (from: number, to: number) => {
+    setEditFiles((prev) => moveItem(prev, from, to));
+    setEditPreviews((prev) => moveItem(prev, from, to));
+  };
+
+  const handleRemoveEditNewFile = (index: number) => {
+    setEditFiles((prev) => prev.filter((_, i) => i !== index));
+    setEditPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleReorderExistingItems = (from: number, to: number) => {
+    setExistingItemsOrder((prev) => moveItem(prev, from, to));
   };
 
   const handleDeleteItem = async (item: GalleryItem) => {
@@ -198,7 +367,8 @@ export default function GalleryAdmin({
       if (path) await supabase.storage.from("church-images").remove([path]);
     }
     await supabase.from("gallery").delete().eq("id", item.id);
-    setItems(items.filter((i) => i.id !== item.id));
+    setItems((prev) => prev.filter((i) => i.id !== item.id));
+    setExistingItemsOrder((prev) => prev.filter((i) => i.id !== item.id));
   };
 
   const handleSaveEditAlbum = async () => {
@@ -216,9 +386,24 @@ export default function GalleryAdmin({
         .single();
       if (albumError) throw albumError;
 
-      const newItems: GalleryItem[] = [];
+      // 2. 기존 항목들 순서(드래그로 정한 순서) DB에 반영
+      const reorderedExisting = existingItemsOrder.map((item, idx) => ({
+        ...item,
+        sort_order: idx,
+      }));
+      await Promise.all(
+        reorderedExisting.map((item) =>
+          supabase
+            .from("gallery")
+            .update({ sort_order: item.sort_order })
+            .eq("id", item.id),
+        ),
+      );
 
-      // 2. 새 사진 업로드 (있는 경우 추가)
+      const newItems: GalleryItem[] = [];
+      let order = reorderedExisting.length;
+
+      // 3. 새 사진 업로드 (editFiles 배열 순서대로, 기존 항목들 뒤에 이어서)
       for (const file of editFiles) {
         const ext = file.name.split(".").pop();
         const fileName = `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -237,14 +422,16 @@ export default function GalleryAdmin({
             type: "image",
             image_url: publicUrl,
             album_id: editAlbum.id,
+            sort_order: order,
           })
           .select()
           .single();
         if (itemError) throw itemError;
         newItems.push(item);
+        order += 1;
       }
 
-      // 3. 새 유튜브 추가 (있는 경우)
+      // 4. 새 유튜브 추가 (있는 경우, 맨 뒤)
       if (editYoutubeUrl) {
         const { data: item, error: itemError } = await supabase
           .from("gallery")
@@ -252,6 +439,7 @@ export default function GalleryAdmin({
             type: "youtube",
             youtube_url: editYoutubeUrl,
             album_id: editAlbum.id,
+            sort_order: order,
           })
           .select()
           .single();
@@ -259,10 +447,12 @@ export default function GalleryAdmin({
         newItems.push(item);
       }
 
-      // 4. 커버 이미지가 없었다면 새로 추가된 사진으로 설정
+      // 5. 커버 이미지가 없었다면 1번 순서 사진으로 설정
       let finalAlbum = updatedAlbum;
       if (!updatedAlbum.cover_image_url) {
-        const coverUrl = newItems.find((i) => i.type === "image")?.image_url;
+        const coverUrl =
+          reorderedExisting.find((i) => i.type === "image")?.image_url ??
+          newItems.find((i) => i.type === "image")?.image_url;
         if (coverUrl) {
           const { data: coverUpdated } = await supabase
             .from("gallery_albums")
@@ -274,8 +464,13 @@ export default function GalleryAdmin({
         }
       }
 
+      // 6. 로컬 상태 갱신: 이 앨범에 속한 항목들을 새 순서로 교체
+      setItems((prev) => [
+        ...prev.filter((i) => i.album_id !== editAlbum.id),
+        ...reorderedExisting,
+        ...newItems,
+      ]);
       setAlbums(albums.map((a) => (a.id === editAlbum.id ? finalAlbum : a)));
-      if (newItems.length > 0) setItems([...newItems, ...items]);
 
       handleCancelEditAlbum();
     } catch (e) {
@@ -286,11 +481,10 @@ export default function GalleryAdmin({
   };
 
   const albumItems = selectedAlbum
-    ? items.filter((i) => i.album_id === selectedAlbum.id)
-    : [];
-
-  const editAlbumItems = editAlbum
-    ? items.filter((i) => i.album_id === editAlbum.id)
+    ? items
+        .filter((i) => i.album_id === selectedAlbum.id)
+        .slice()
+        .sort((a, b) => a.sort_order - b.sort_order)
     : [];
 
   // 앨범 목록
@@ -411,7 +605,8 @@ export default function GalleryAdmin({
 
           <div>
             <label className="block text-xs text-gray-500 mb-2">
-              사진 (여러 장 선택 가능)
+              사진 (여러 장 선택 가능 — 썸네일을 드래그하면 순서를 바꿀 수
+              있어요)
             </label>
             <label className="inline-block cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm px-4 py-2 rounded-lg transition-colors">
               📷 사진 선택
@@ -424,27 +619,17 @@ export default function GalleryAdmin({
               />
             </label>
             {albumPreviews.length > 0 && (
-              <div className="grid grid-cols-4 gap-2 mt-3">
-                {albumPreviews.map((src, i) => (
-                  <div
-                    key={i}
-                    className="relative aspect-square rounded-lg overflow-hidden bg-gray-100"
-                  >
-                    <Image
-                      src={src}
-                      alt={`미리보기 ${i + 1}`}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
+              <ReorderablePreviewGrid
+                previews={albumPreviews}
+                onReorder={handleReorderNewFiles}
+                onRemove={handleRemoveNewFile}
+              />
             )}
           </div>
 
           <div>
             <label className="block text-xs text-gray-500 mb-2">
-              유튜브 URL (선택)
+              유튜브 URL (선택, 항상 마지막 순서로 추가됩니다)
             </label>
             <input
               type="text"
@@ -506,52 +691,30 @@ export default function GalleryAdmin({
             />
           </div>
 
-          {/* 기존 사진/영상 목록 (삭제 가능) */}
+          {/* 기존 사진/영상 — 드래그로 순서 변경, 저장 시 반영 */}
           <div>
             <label className="block text-xs text-gray-500 mb-2">
-              등록된 사진/영상 ({editAlbumItems.length})
+              등록된 사진/영상 ({existingItemsOrder.length}) — 드래그해서 순서를
+              바꾸세요
             </label>
-            {editAlbumItems.length === 0 ? (
+            {existingItemsOrder.length === 0 ? (
               <p className="text-xs text-gray-400">
                 아직 등록된 항목이 없습니다.
               </p>
             ) : (
-              <div className="grid grid-cols-4 gap-2">
-                {editAlbumItems.map((item) => (
-                  <div key={item.id} className="relative group aspect-square">
-                    <div className="relative w-full h-full rounded-lg overflow-hidden bg-gray-100">
-                      {item.type === "image" && item.image_url ? (
-                        <Image
-                          src={item.image_url}
-                          alt="갤러리"
-                          fill
-                          className="object-cover"
-                        />
-                      ) : item.youtube_url ? (
-                        <Image
-                          src={`https://img.youtube.com/vi/${getYoutubeId(item.youtube_url)}/hqdefault.jpg`}
-                          alt="유튜브"
-                          fill
-                          className="object-cover"
-                        />
-                      ) : null}
-                    </div>
-                    <button
-                      onClick={() => handleDeleteItem(item)}
-                      className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      삭제
-                    </button>
-                  </div>
-                ))}
-              </div>
+              <ReorderableItemGrid
+                items={existingItemsOrder}
+                onReorder={handleReorderExistingItems}
+                onDelete={handleDeleteItem}
+              />
             )}
           </div>
 
           {/* 사진 추가 */}
           <div>
             <label className="block text-xs text-gray-500 mb-2">
-              사진 추가 (선택)
+              사진 추가 (선택 — 기존 항목들 뒤에 이어서 추가되며, 드래그로 순서
+              조정 가능)
             </label>
             <label className="inline-block cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm px-4 py-2 rounded-lg transition-colors">
               📷 사진 선택
@@ -564,28 +727,18 @@ export default function GalleryAdmin({
               />
             </label>
             {editPreviews.length > 0 && (
-              <div className="grid grid-cols-4 gap-2 mt-3">
-                {editPreviews.map((src, i) => (
-                  <div
-                    key={i}
-                    className="relative aspect-square rounded-lg overflow-hidden bg-gray-100"
-                  >
-                    <Image
-                      src={src}
-                      alt={`미리보기 ${i + 1}`}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
+              <ReorderablePreviewGrid
+                previews={editPreviews}
+                onReorder={handleReorderEditNewFiles}
+                onRemove={handleRemoveEditNewFile}
+              />
             )}
           </div>
 
           {/* 유튜브 추가 */}
           <div>
             <label className="block text-xs text-gray-500 mb-2">
-              유튜브 URL 추가 (선택)
+              유튜브 URL 추가 (선택, 항상 마지막 순서로 추가됩니다)
             </label>
             <input
               type="text"
