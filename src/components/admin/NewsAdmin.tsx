@@ -24,6 +24,14 @@ export default function NewsAdmin({
   const [preview, setPreview] = useState<string | null>(null);
   const supabase = createClient();
 
+  // 수정 관련 상태
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDate, setEditDate] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editPreview, setEditPreview] = useState<string | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
@@ -76,6 +84,80 @@ export default function NewsAdmin({
     await supabase.storage.from("church-images").remove([path]);
     await supabase.from("news").delete().eq("id", id);
     setItems(items.filter((i) => i.id !== id));
+  };
+
+  const handleStartEdit = (item: NewsItem) => {
+    setEditingId(item.id);
+    setEditDate(item.news_date);
+    setEditDescription(item.description ?? "");
+    setEditFile(null);
+    setEditPreview(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditDate("");
+    setEditDescription("");
+    setEditFile(null);
+    setEditPreview(null);
+  };
+
+  const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setEditFile(f);
+    setEditPreview(URL.createObjectURL(f));
+  };
+
+  const handleSaveEdit = async (item: NewsItem) => {
+    if (!editDate) return alert("날짜를 입력해주세요.");
+    setSavingEdit(true);
+
+    try {
+      let imageUrl = item.image_url;
+
+      // 새 사진이 선택된 경우 업로드 후 기존 사진 삭제
+      if (editFile) {
+        const ext = editFile.name.split(".").pop();
+        const fileName = `news/${Date.now()}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("church-images")
+          .upload(fileName, editFile);
+        if (uploadError) throw uploadError;
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("church-images").getPublicUrl(fileName);
+
+        const oldPath = item.image_url.split("/church-images/")[1];
+        if (oldPath) {
+          await supabase.storage.from("church-images").remove([oldPath]);
+        }
+
+        imageUrl = publicUrl;
+      }
+
+      const { data, error: dbError } = await supabase
+        .from("news")
+        .update({
+          news_date: editDate,
+          description: editDescription,
+          image_url: imageUrl,
+        })
+        .eq("id", item.id)
+        .select()
+        .single();
+
+      if (dbError) throw dbError;
+
+      setItems(items.map((i) => (i.id === item.id ? data : i)));
+      handleCancelEdit();
+    } catch (e) {
+      alert("수정 실패: " + (e as Error).message);
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   return (
@@ -151,27 +233,99 @@ export default function NewsAdmin({
           <p className="text-sm text-gray-400">아직 등록된 소식이 없습니다.</p>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {items.map((item) => (
-              <div key={item.id} className="relative group">
-                <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100">
-                  <Image
-                    src={item.image_url}
-                    alt="소식"
-                    fill
-                    className="object-cover"
-                  />
+            {items.map((item) => {
+              const isEditing = editingId === item.id;
+
+              if (isEditing) {
+                return (
+                  <div
+                    key={item.id}
+                    className="border border-yellow-200 rounded-lg p-3 space-y-3 bg-yellow-50/40"
+                  >
+                    <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100">
+                      <Image
+                        src={editPreview ?? item.image_url}
+                        alt="수정 미리보기"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+
+                    <label className="inline-block cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-3 py-1.5 rounded-lg transition-colors">
+                      📷 사진 변경
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEditFileChange}
+                        className="hidden"
+                      />
+                    </label>
+
+                    <input
+                      type="date"
+                      value={editDate}
+                      onChange={(e) => setEditDate(e.target.value)}
+                      className="w-full border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-yellow-300"
+                    />
+
+                    <input
+                      type="text"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="설명"
+                      className="w-full border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-yellow-300"
+                    />
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleSaveEdit(item)}
+                        disabled={savingEdit}
+                        className="flex-1 bg-yellow-300 hover:bg-yellow-400 disabled:opacity-50 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        {savingEdit ? "저장 중..." : "저장"}
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        disabled={savingEdit}
+                        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={item.id} className="relative group">
+                  <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-gray-100">
+                    <Image
+                      src={item.image_url}
+                      alt="소식"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1 text-center">
+                    {item.news_date}
+                  </p>
+                  <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleStartEdit(item)}
+                      className="bg-yellow-300 hover:bg-yellow-400 text-gray-700 text-xs px-2 py-1 rounded-lg"
+                    >
+                      수정
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item.id, item.image_url)}
+                      className="bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 rounded-lg"
+                    >
+                      삭제
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-400 mt-1 text-center">
-                  {item.news_date}
-                </p>
-                <button
-                  onClick={() => handleDelete(item.id, item.image_url)}
-                  className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  삭제
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

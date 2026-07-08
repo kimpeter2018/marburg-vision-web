@@ -34,7 +34,9 @@ export default function GalleryAdmin({
 }) {
   const [albums, setAlbums] = useState(initialAlbums);
   const [items, setItems] = useState(initialItems);
-  const [view, setView] = useState<"list" | "new-album" | "album">("list");
+  const [view, setView] = useState<
+    "list" | "new-album" | "edit-album" | "album"
+  >("list");
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
 
   // 새 앨범 폼 상태
@@ -44,6 +46,15 @@ export default function GalleryAdmin({
   const [albumPreviews, setAlbumPreviews] = useState<string[]>([]);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [uploading, setUploading] = useState(false);
+
+  // 앨범 수정 폼 상태
+  const [editAlbum, setEditAlbum] = useState<Album | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editFiles, setEditFiles] = useState<File[]>([]);
+  const [editPreviews, setEditPreviews] = useState<string[]>([]);
+  const [editYoutubeUrl, setEditYoutubeUrl] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const supabase = createClient();
 
@@ -153,8 +164,133 @@ export default function GalleryAdmin({
     setItems(items.filter((i) => i.album_id !== album.id));
   };
 
+  const handleStartEditAlbum = (album: Album) => {
+    setEditAlbum(album);
+    setEditTitle(album.title);
+    setEditDesc(album.description ?? "");
+    setEditFiles([]);
+    setEditPreviews([]);
+    setEditYoutubeUrl("");
+    setView("edit-album");
+  };
+
+  const handleCancelEditAlbum = () => {
+    setEditAlbum(null);
+    setEditTitle("");
+    setEditDesc("");
+    setEditFiles([]);
+    setEditPreviews([]);
+    setEditYoutubeUrl("");
+    setView("list");
+  };
+
+  const handleEditFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    setEditFiles(files);
+    setEditPreviews(files.map((f) => URL.createObjectURL(f)));
+  };
+
+  const handleDeleteItem = async (item: GalleryItem) => {
+    if (!confirm("이 항목을 삭제하시겠습니까?")) return;
+
+    if (item.image_url) {
+      const path = item.image_url.split("/church-images/")[1];
+      if (path) await supabase.storage.from("church-images").remove([path]);
+    }
+    await supabase.from("gallery").delete().eq("id", item.id);
+    setItems(items.filter((i) => i.id !== item.id));
+  };
+
+  const handleSaveEditAlbum = async () => {
+    if (!editAlbum) return;
+    if (!editTitle) return alert("제목을 입력해주세요.");
+    setSavingEdit(true);
+
+    try {
+      // 1. 제목/설명 업데이트
+      const { data: updatedAlbum, error: albumError } = await supabase
+        .from("gallery_albums")
+        .update({ title: editTitle, description: editDesc })
+        .eq("id", editAlbum.id)
+        .select()
+        .single();
+      if (albumError) throw albumError;
+
+      const newItems: GalleryItem[] = [];
+
+      // 2. 새 사진 업로드 (있는 경우 추가)
+      for (const file of editFiles) {
+        const ext = file.name.split(".").pop();
+        const fileName = `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("church-images")
+          .upload(fileName, file);
+        if (uploadError) throw uploadError;
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("church-images").getPublicUrl(fileName);
+
+        const { data: item, error: itemError } = await supabase
+          .from("gallery")
+          .insert({
+            type: "image",
+            image_url: publicUrl,
+            album_id: editAlbum.id,
+          })
+          .select()
+          .single();
+        if (itemError) throw itemError;
+        newItems.push(item);
+      }
+
+      // 3. 새 유튜브 추가 (있는 경우)
+      if (editYoutubeUrl) {
+        const { data: item, error: itemError } = await supabase
+          .from("gallery")
+          .insert({
+            type: "youtube",
+            youtube_url: editYoutubeUrl,
+            album_id: editAlbum.id,
+          })
+          .select()
+          .single();
+        if (itemError) throw itemError;
+        newItems.push(item);
+      }
+
+      // 4. 커버 이미지가 없었다면 새로 추가된 사진으로 설정
+      let finalAlbum = updatedAlbum;
+      if (!updatedAlbum.cover_image_url) {
+        const coverUrl = newItems.find((i) => i.type === "image")?.image_url;
+        if (coverUrl) {
+          const { data: coverUpdated } = await supabase
+            .from("gallery_albums")
+            .update({ cover_image_url: coverUrl })
+            .eq("id", editAlbum.id)
+            .select()
+            .single();
+          if (coverUpdated) finalAlbum = coverUpdated;
+        }
+      }
+
+      setAlbums(albums.map((a) => (a.id === editAlbum.id ? finalAlbum : a)));
+      if (newItems.length > 0) setItems([...newItems, ...items]);
+
+      handleCancelEditAlbum();
+    } catch (e) {
+      alert("수정 실패: " + (e as Error).message);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const albumItems = selectedAlbum
     ? items.filter((i) => i.album_id === selectedAlbum.id)
+    : [];
+
+  const editAlbumItems = editAlbum
+    ? items.filter((i) => i.album_id === editAlbum.id)
     : [];
 
   // 앨범 목록
@@ -208,12 +344,20 @@ export default function GalleryAdmin({
                       {items.filter((i) => i.album_id === album.id).length}개
                     </p>
                   </button>
-                  <button
-                    onClick={() => handleDeleteAlbum(album)}
-                    className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    삭제
-                  </button>
+                  <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleStartEditAlbum(album)}
+                      className="bg-yellow-300 hover:bg-yellow-400 text-gray-700 text-xs px-2 py-1 rounded-lg"
+                    >
+                      수정
+                    </button>
+                    <button
+                      onClick={() => handleDeleteAlbum(album)}
+                      className="bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 rounded-lg"
+                    >
+                      삭제
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -323,6 +467,156 @@ export default function GalleryAdmin({
     );
   }
 
+  // 앨범 수정
+  if (view === "edit-album" && editAlbum) {
+    return (
+      <div className="space-y-6">
+        <button
+          onClick={handleCancelEditAlbum}
+          className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          ← 목록으로
+        </button>
+
+        <div className="bg-white rounded-xl p-6 shadow-sm space-y-5">
+          <h2 className="text-sm font-semibold text-gray-600">앨범 수정</h2>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-2">
+              앨범 제목 *
+            </label>
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-2">
+              설명 (선택)
+            </label>
+            <input
+              type="text"
+              value={editDesc}
+              onChange={(e) => setEditDesc(e.target.value)}
+              placeholder="앨범 설명을 입력하세요"
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300"
+            />
+          </div>
+
+          {/* 기존 사진/영상 목록 (삭제 가능) */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-2">
+              등록된 사진/영상 ({editAlbumItems.length})
+            </label>
+            {editAlbumItems.length === 0 ? (
+              <p className="text-xs text-gray-400">
+                아직 등록된 항목이 없습니다.
+              </p>
+            ) : (
+              <div className="grid grid-cols-4 gap-2">
+                {editAlbumItems.map((item) => (
+                  <div key={item.id} className="relative group aspect-square">
+                    <div className="relative w-full h-full rounded-lg overflow-hidden bg-gray-100">
+                      {item.type === "image" && item.image_url ? (
+                        <Image
+                          src={item.image_url}
+                          alt="갤러리"
+                          fill
+                          className="object-cover"
+                        />
+                      ) : item.youtube_url ? (
+                        <Image
+                          src={`https://img.youtube.com/vi/${getYoutubeId(item.youtube_url)}/hqdefault.jpg`}
+                          alt="유튜브"
+                          fill
+                          className="object-cover"
+                        />
+                      ) : null}
+                    </div>
+                    <button
+                      onClick={() => handleDeleteItem(item)}
+                      className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 사진 추가 */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-2">
+              사진 추가 (선택)
+            </label>
+            <label className="inline-block cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm px-4 py-2 rounded-lg transition-colors">
+              📷 사진 선택
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleEditFilesChange}
+                className="hidden"
+              />
+            </label>
+            {editPreviews.length > 0 && (
+              <div className="grid grid-cols-4 gap-2 mt-3">
+                {editPreviews.map((src, i) => (
+                  <div
+                    key={i}
+                    className="relative aspect-square rounded-lg overflow-hidden bg-gray-100"
+                  >
+                    <Image
+                      src={src}
+                      alt={`미리보기 ${i + 1}`}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 유튜브 추가 */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-2">
+              유튜브 URL 추가 (선택)
+            </label>
+            <input
+              type="text"
+              value={editYoutubeUrl}
+              onChange={(e) => setEditYoutubeUrl(e.target.value)}
+              placeholder="https://youtube.com/watch?v=..."
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300"
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleSaveEditAlbum}
+              disabled={savingEdit}
+              className="bg-yellow-300 hover:bg-yellow-400 disabled:opacity-50 text-gray-700 font-medium text-sm px-6 py-2.5 rounded-lg transition-colors"
+            >
+              {savingEdit ? "저장 중..." : "저장하기"}
+            </button>
+            <button
+              onClick={handleCancelEditAlbum}
+              disabled={savingEdit}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium text-sm px-6 py-2.5 rounded-lg transition-colors"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // 앨범 상세
   return (
     <div className="space-y-6">
@@ -337,9 +631,19 @@ export default function GalleryAdmin({
       </button>
 
       <div className="bg-white rounded-xl p-6 shadow-sm">
-        <h2 className="text-sm font-semibold text-gray-700 mb-1">
-          {selectedAlbum?.title}
-        </h2>
+        <div className="flex items-start justify-between mb-1">
+          <h2 className="text-sm font-semibold text-gray-700">
+            {selectedAlbum?.title}
+          </h2>
+          {selectedAlbum && (
+            <button
+              onClick={() => handleStartEditAlbum(selectedAlbum)}
+              className="bg-yellow-300 hover:bg-yellow-400 text-gray-700 text-xs px-3 py-1 rounded-lg transition-colors"
+            >
+              수정
+            </button>
+          )}
+        </div>
         {selectedAlbum?.description && (
           <p className="text-xs text-gray-400 mb-4">
             {selectedAlbum.description}
