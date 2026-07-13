@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 
 type Album = {
@@ -17,13 +17,16 @@ type GalleryItem = {
   image_url: string | null;
   youtube_url: string | null;
   album_id: string | null;
-  sort_order: number;
+  sort_order?: number;
 };
 
 function getYoutubeId(url: string) {
   const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
   return match ? match[1] : null;
 }
+
+// 스와이프로 인식할 최소 이동 거리(px)
+const SWIPE_THRESHOLD = 50;
 
 function AlbumDetail({
   album,
@@ -35,6 +38,7 @@ function AlbumDetail({
   onBack: () => void;
 }) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const handlePrev = useCallback(() => {
     setSelectedIndex((i) =>
@@ -58,6 +62,35 @@ function AlbumDetail({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [selectedIndex, handlePrev, handleNext, handleClose]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+
+    // 세로 스크롤 제스처는 무시하고, 수평 이동이 충분할 때만 넘김
+    if (
+      Math.abs(deltaX) < SWIPE_THRESHOLD ||
+      Math.abs(deltaX) < Math.abs(deltaY)
+    ) {
+      return;
+    }
+
+    if (deltaX < 0) {
+      handleNext();
+    } else {
+      handlePrev();
+    }
+  };
 
   const selected = selectedIndex !== null ? items[selectedIndex] : null;
 
@@ -121,6 +154,8 @@ function AlbumDetail({
           <div
             className="relative max-w-4xl w-full"
             onClick={(e) => e.stopPropagation()}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
           >
             {/* 닫기 */}
             <button
@@ -135,13 +170,13 @@ function AlbumDetail({
               {selectedIndex + 1} / {items.length}
             </div>
 
-            {/* 이전 버튼 */}
+            {/* 이전 버튼 — 데스크탑 전용 (모바일은 탭/스와이프로 대체) */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handlePrev();
               }}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-14 w-10 h-10 bg-white/20 hover:bg-white/40 text-white rounded-full flex items-center justify-center transition-colors z-10"
+              className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-14 w-10 h-10 bg-white/20 hover:bg-white/40 text-white rounded-full items-center justify-center transition-colors z-10"
             >
               ←
             </button>
@@ -156,6 +191,24 @@ function AlbumDetail({
                   className="object-contain"
                   sizes="100vw"
                 />
+
+                {/* 모바일 탭 영역 — 좌/우 탭으로 이전/다음 사진 이동 */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrev();
+                  }}
+                  className="md:hidden absolute left-0 top-0 h-full w-1/3 z-10"
+                  aria-label="이전 사진"
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNext();
+                  }}
+                  className="md:hidden absolute right-0 top-0 h-full w-1/3 z-10"
+                  aria-label="다음 사진"
+                />
               </div>
             ) : selected.type === "youtube" && selected.youtube_url ? (
               <div className="relative w-full aspect-video rounded-xl overflow-hidden">
@@ -169,16 +222,30 @@ function AlbumDetail({
               </div>
             ) : null}
 
-            {/* 다음 버튼 */}
+            {/* 다음 버튼 — 데스크탑 전용 (모바일은 탭/스와이프로 대체) */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleNext();
               }}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-14 w-10 h-10 bg-white/20 hover:bg-white/40 text-white rounded-full flex items-center justify-center transition-colors z-10"
+              className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-14 w-10 h-10 bg-white/20 hover:bg-white/40 text-white rounded-full items-center justify-center transition-colors z-10"
             >
               →
             </button>
+
+            {/* 모바일 페이지 인디케이터 */}
+            <div className="md:hidden flex justify-center gap-1.5 mt-4">
+              {items.map((_, i) => (
+                <span
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i === selectedIndex
+                      ? "w-4 bg-yellow-300"
+                      : "w-1.5 bg-white/40"
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
