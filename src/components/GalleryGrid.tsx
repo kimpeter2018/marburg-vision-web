@@ -25,6 +25,28 @@ function getYoutubeId(url: string) {
   return match ? match[1] : null;
 }
 
+const MAX_DOTS = 7;
+
+// 현재 인덱스를 중심으로 최대 maxDots개만 보여주는 범위 계산.
+// 처음/끝 근처에서는 창이 더 이상 슬라이드하지 않아 자연스럽게 끝에 다다른 걸 알 수 있음.
+function getDotRange(current: number, total: number, maxDots: number) {
+  if (total <= maxDots) return { start: 0, end: total };
+
+  const half = Math.floor(maxDots / 2);
+  let start = current - half;
+  let end = start + maxDots;
+
+  if (start < 0) {
+    start = 0;
+    end = maxDots;
+  } else if (end > total) {
+    end = total;
+    start = total - maxDots;
+  }
+
+  return { start, end };
+}
+
 // 스와이프로 인식할 최소 이동 거리(px)
 const SWIPE_THRESHOLD = 50;
 
@@ -233,18 +255,28 @@ function AlbumDetail({
               →
             </button>
 
-            {/* 모바일 페이지 인디케이터 */}
+            {/* 모바일 페이지 인디케이터 — 사진이 많아도 최대 7개까지만 표시 */}
             <div className="md:hidden flex justify-center gap-1.5 mt-4">
-              {items.map((_, i) => (
-                <span
-                  key={i}
-                  className={`h-1.5 rounded-full transition-all ${
-                    i === selectedIndex
-                      ? "w-4 bg-yellow-300"
-                      : "w-1.5 bg-white/40"
-                  }`}
-                />
-              ))}
+              {(() => {
+                const { start, end } = getDotRange(
+                  selectedIndex,
+                  items.length,
+                  MAX_DOTS,
+                );
+                return Array.from(
+                  { length: end - start },
+                  (_, idx) => start + idx,
+                ).map((i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all ${
+                      i === selectedIndex
+                        ? "w-4 bg-yellow-300"
+                        : "w-1.5 bg-white/40"
+                    }`}
+                  />
+                ));
+              })()}
             </div>
           </div>
         </div>

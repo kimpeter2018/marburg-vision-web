@@ -238,7 +238,7 @@ export default async function HomePage() {
             <div className="w-12 h-1 bg-yellow-300 mb-10 rounded-full" />
 
             {albums && albums.length > 0 ? (
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+              <div className="grid grid-cols-3 gap-4">
                 {albums.map((album) => (
                   <Link
                     href="/gallery"
@@ -251,7 +251,7 @@ export default async function HomePage() {
                         alt={`마부르크 비전교회 ${album.title} 갤러리`}
                         fill
                         className="object-cover"
-                        sizes="(max-width: 768px) 33vw, 16vw"
+                        sizes="(max-width: 768px) 33vw, 384px"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">
@@ -262,7 +262,7 @@ export default async function HomePage() {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+              <div className="grid grid-cols-3 gap-4">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <div
                     key={i}
